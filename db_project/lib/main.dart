@@ -3,6 +3,10 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'dart:io';
 
+// page import
+import 'kiosk_page.dart';
+import 'admin_page.dart';
+
 void main() {
   runApp(const MyApp());
 }
@@ -13,11 +17,24 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'POS System',
+      title: '매장 관리 시스템',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        primaryColor: Colors.white,
+        colorScheme: ColorScheme.fromSwatch().copyWith(secondary: Colors.blue),
+        scaffoldBackgroundColor: Colors.white,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.blue,
+          foregroundColor: Colors.white,
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.blue,
+            foregroundColor: Colors.white,
+            textStyle: const TextStyle(fontSize: 20, inherit: false),
+          ),
+        ),
       ),
-      home: const MyHomePage(title: 'POS System'),
+      home: const MyHomePage(title: '매장 관리 시스템'),
     );
   }
 }
@@ -32,60 +49,54 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  late Database database;
-  List<Map<String, dynamic>> menus = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _openDatabase();
-  }
-
-  Future<void> _openDatabase() async {
-    // 데이터베이스 파일 경로 설정
-    String dbPath = join(await getDatabasesPath(), 'pos_database.db');
-
-    // 기존 데이터베이스 열기
-    database = await openDatabase(dbPath);
-    _fetchMenus();
-  }
-
-  Future<void> _fetchMenus() async {
-    final List<Map<String, dynamic>> maps = await database.query('menu');
-    setState(() {
-      menus = maps;
-    });
-  }
-
-  @override
-  void dispose() {
-    database.close();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
       ),
-      body: ListView.builder(
-        itemCount: menus.length,
-        itemBuilder: (context, index) {
-          String imageUrl = menus[index]['menu_image_url'];
-          String imagePath = 'assets/image/$imageUrl';
-
-          return ListTile(
-            leading: Image.asset(
-              imagePath,
-              errorBuilder: (context, error, stackTrace) {
-                return Image.asset('assets/image/no_image.png');
-              },
+      body: Center(
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.shopping_cart, size: 50, color: Colors.blue),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const KioskPage()),
+                      );
+                    },
+                    child: const Text('Kiosk Page'),
+                  ),
+                ],
+              ),
             ),
-            title: Text(menus[index]['menu_name']),
-            subtitle: Text('Price: \$${menus[index]['menu_price']}'),
-          );
-        },
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.admin_panel_settings,
+                      size: 50, color: Colors.blue),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const AdminPage()),
+                      );
+                    },
+                    child: const Text('Admin Page'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
