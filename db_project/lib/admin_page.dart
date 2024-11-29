@@ -35,7 +35,7 @@ class _AdminPageState extends State<AdminPage> {
       SELECT o.order_id, o.order_status, o.order_time, o.wait_number, o.total_price, pm.payment_type
       FROM `order` o
       JOIN `payment_method` pm ON o.payment_method = pm.payment_method_id
-      ORDER BY o.order_time DESC
+      ORDER BY o.order_time 
     ''');
 
     setState(() {
@@ -91,8 +91,8 @@ class _AdminPageState extends State<AdminPage> {
           backgroundColor: Colors.green,
           titleTextStyle: const TextStyle(color: Colors.white, fontSize: 20),
           bottom: const TabBar(
-            labelColor: Colors.white, // 선택된 탭의 텍스트 색상
-            unselectedLabelColor: Colors.white70, // 선택되지 않은 탭의 텍스트 색상
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white70,
             tabs: [
               Tab(text: '주문목록'),
               Tab(text: '재고현황'),
@@ -118,15 +118,23 @@ class _AdminPageState extends State<AdminPage> {
         final order = orders[index];
         return Card(
           margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15.0),
+          ),
+          elevation: 5,
           child: ListTile(
-            title: Text('주문 번호: ${order['order_id']}'),
+            contentPadding: const EdgeInsets.all(16.0),
+            title: Text(
+              '주문 번호: ${order['wait_number']}',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('상태: ${order['order_status']}'),
-                Text('시간: ${order['order_time']}'),
-                Text('대기 번호: ${order['wait_number']}'),
-                Text('총 가격: ${order['total_price']} 원'),
+                const SizedBox(height: 8.0),
+                Text('주문 상태: ${order['order_status']}'),
+                Text('주문 시간: ${order['order_time']}'),
+                Text('가격: ${order['total_price']} 원'),
                 Text('결제 방식: ${order['payment_type']}'),
               ],
             ),
@@ -163,7 +171,7 @@ class _AdminPageState extends State<AdminPage> {
         return Card(
           margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
           child: ListTile(
-            title: Text('재고: ${item['item_name']}'),
+            title: Text('${item['item_name']}'),
             subtitle: Text('수량: ${item['item_quantity']} ${item['item_unit']}'),
           ),
         );
