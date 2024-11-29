@@ -14,6 +14,7 @@ class OrderDetailsPage extends StatefulWidget {
 class _OrderDetailsPageState extends State<OrderDetailsPage> {
   late Database database;
   List<Map<String, dynamic>> orderDetails = [];
+  Map<int, List<Map<String, dynamic>>> recipeDetails = {};
 
   @override
   void initState() {
@@ -29,7 +30,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
 
   Future<void> _fetchOrderDetails() async {
     final List<Map<String, dynamic>> result = await database.rawQuery('''
-      SELECT m.menu_name, od.order_menu_count, od.order_sub_total
+      SELECT m.menu_name, od.order_menu_count, od.order_sub_total, m.menu_id
       FROM `order_details` od
       JOIN `menu` m ON od.menu_id = m.menu_id
       WHERE od.order_id = ?
@@ -37,6 +38,24 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
 
     setState(() {
       orderDetails = result;
+    });
+
+    for (var order in result) {
+      int menuId = order['menu_id'];
+      await _fetchRecipeDetails(menuId);
+    }
+  }
+
+  Future<void> _fetchRecipeDetails(int menuId) async {
+    final List<Map<String, dynamic>> result = await database.rawQuery('''
+      SELECT i.item_name, rd.quantity_required, i.item_unit
+      FROM `RecipeDetails` rd
+      JOIN `inventory` i ON rd.item_id = i.item_id
+      WHERE rd.menu_id = ?
+    ''', [menuId]);
+
+    setState(() {
+      recipeDetails[menuId] = result;
     });
   }
 
@@ -50,22 +69,27 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Order Details'),
+        title: const Text('주문 상세 정보'),
+        backgroundColor: Colors.green,
       ),
       body: ListView.builder(
         itemCount: orderDetails.length,
         itemBuilder: (context, index) {
-          final detail = orderDetails[index];
-          return ListTile(
-            title: Text('메뉴: ${detail['menu_name']}'),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('수량: ${detail['order_menu_count']}'),
-                Text('소계: ${detail['order_sub_total']} 원'),
-              ],
-            ),
-            isThreeLine: true,
+          final order = orderDetails[index];
+          final menuId = order['menu_id'];
+          final recipes = recipeDetails[menuId] ?? [];
+
+          return ExpansionTile(
+            title: Text(order['menu_name']),
+            subtitle: Text(
+                '수량 : ${order['order_menu_count']} - 소계 : ${order['order_sub_total']}'),
+            children: recipes.map((recipe) {
+              return ListTile(
+                title: Text(recipe['item_name']),
+                subtitle: Text(
+                    '필요 수량: ${recipe['quantity_required']} ${recipe['item_unit']}'),
+              );
+            }).toList(),
           );
         },
       ),
