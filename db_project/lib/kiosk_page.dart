@@ -11,6 +11,7 @@ class KioskPage extends StatefulWidget {
 
 class _KioskPageState extends State<KioskPage> {
   final List<Map<String, dynamic>> _cartItems = [];
+  Map<int, int> menuStatus = {}; // 메뉴 주문 가능상태 저장
   late Database database;
   Map<String, List<Map<String, dynamic>>> categorizedMenus = {
     '버거': [],
@@ -24,10 +25,13 @@ class _KioskPageState extends State<KioskPage> {
     _openDatabase();
   }
 
+  /* DB Open / Init 관련 */
+
   Future<void> _openDatabase() async {
     String dbPath = join(await getDatabasesPath(), 'pos_database.db');
     database = await openDatabase(dbPath);
     _fetchMenus();
+    _fetchMenuStatus();
   }
 
   Future<void> _fetchMenus() async {
@@ -48,12 +52,25 @@ class _KioskPageState extends State<KioskPage> {
     });
   }
 
+  Future<void> _fetchMenuStatus() async {
+    final List<Map<String, dynamic>> result = await database.rawQuery('''
+      SELECT menu_id, menu_stat
+      FROM menu
+    ''');
+    setState(() {
+      for (var menu in result) {
+        menuStatus[menu['menu_id']] = menu['menu_stat'];
+      }
+    });
+  }
+
   @override
   void dispose() {
     database.close();
     super.dispose();
   }
 
+  /* 장바구니 관련 */
   void _addToCart(String item, int quantity, int price) {
     setState(() {
       bool itemExists = false;
@@ -76,6 +93,29 @@ class _KioskPageState extends State<KioskPage> {
     });
   }
 
+  void _increaseQuantity(int index) {
+    setState(() {
+      _cartItems[index]['quantity']++;
+    });
+  }
+
+  void _decreaseQuantity(int index) {
+    setState(() {
+      if (_cartItems[index]['quantity'] > 1) {
+        _cartItems[index]['quantity']--;
+      } else {
+        _cartItems.removeAt(index);
+      }
+    });
+  }
+
+  void _removeItem(int index) {
+    setState(() {
+      _cartItems.removeAt(index);
+    });
+  }
+
+  /* Dialog 관련 */
   Future<void> _showQuantityDialog(String item, int price) async {
     int quantity = 1;
     await showDialog<int>(
@@ -141,7 +181,7 @@ class _KioskPageState extends State<KioskPage> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('주문 완료'),
-          content: Text('주문이 완료되었습니다. 대기번호: $waitNumber'),
+          content: Text('주문이 완료되었습니다. \n주문번호: $waitNumber'),
           actions: <Widget>[
             TextButton(
               onPressed: () {
@@ -214,13 +254,14 @@ class _KioskPageState extends State<KioskPage> {
     });
   }
 
+  /* DB Select 관련 */
   Future<void> _handleOrder(String paymentMethod) async {
     int totalPrice = _calculateTotalPrice();
     int waitNumber = await _getNextWaitNumber();
 
     // 주문 테이블에 데이터 삽입
     int orderId = await database.insert('order', {
-      'order_status': 'preparing',
+      'order_status': '준비중',
       'wait_number': waitNumber,
       // 'dine_option': '매장식사', // 필요에 따라 사용
       'total_price': totalPrice,
@@ -270,7 +311,7 @@ class _KioskPageState extends State<KioskPage> {
       length: categorizedMenus.keys.length,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Kiosk System'),
+          title: const Text('Kiosk Page'),
           backgroundColor: Colors.lightBlue,
           actions: [
             Builder(
@@ -324,15 +365,35 @@ class _KioskPageState extends State<KioskPage> {
                   ],
                 ),
               ),
-              ..._cartItems.map((item) => ListTile(
-                    title: Text(item['item']),
-                    subtitle:
-                        Text('가격: ${item['price']} 원  x ${item['quantity']}'),
-                    trailing: Text(
-                      '${item['price'] * item['quantity']} 원',
-                      style: const TextStyle(fontSize: 18), // 가격 텍스트 크기 키움
-                    ),
-                  )),
+              ..._cartItems.asMap().entries.map((entry) {
+                int index = entry.key;
+                var item = entry.value;
+                return ListTile(
+                  title: Text(item['item']),
+                  subtitle: Text('${item['price'] * item['quantity']} 원'),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.remove),
+                        onPressed: () => _decreaseQuantity(index),
+                      ),
+                      Text(
+                        '${item['quantity']} 개',
+                        style: const TextStyle(fontSize: 14), // 가격 텍스트 크기 키움
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.add),
+                        onPressed: () => _increaseQuantity(index),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete),
+                        onPressed: () => _removeItem(index),
+                      ),
+                    ],
+                  ),
+                );
+              }),
               ListTile(
                 title: const Text('합계'),
                 trailing: Text(
@@ -346,7 +407,7 @@ class _KioskPageState extends State<KioskPage> {
                   onPressed: _showPaymentMethodDialog,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.lightBlue,
-                    padding: const EdgeInsets.symmetric(vertical: 16.0),
+                    padding: const EdgeInsets.symmetric(vertical: 12.0),
                     textStyle: const TextStyle(fontSize: 20),
                   ),
                   child: const Text('주문하기'),
@@ -367,9 +428,12 @@ class _KioskPageState extends State<KioskPage> {
         String imageUrl = menu['menu_image_url'];
         String imagePath = 'assets/image/$imageUrl';
 
+        final isAvailable = menuStatus[menu['menu_id']] == 1;
+
         return ListTile(
           contentPadding:
               const EdgeInsets.symmetric(vertical: 20.0, horizontal: 30.0),
+          tileColor: isAvailable ? Colors.white : Colors.grey,
           leading: SizedBox(
             width: 100, // 이미지 크기를 더 키움
             height: 100, // 적절한 높이 값 설정
@@ -404,8 +468,9 @@ class _KioskPageState extends State<KioskPage> {
               ),
             ],
           ),
-          onTap: () =>
-              _showQuantityDialog(menu['menu_name'], menu['menu_price']),
+          onTap: () => isAvailable
+              ? _showQuantityDialog(menu['menu_name'], menu['menu_price'])
+              : null,
         );
       },
     );
