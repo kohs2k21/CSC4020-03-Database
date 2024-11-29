@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'order_details_page.dart';
+import 'inventory_tab.dart';
 
 class AdminPage extends StatefulWidget {
   const AdminPage({super.key});
@@ -103,11 +104,58 @@ class _AdminPageState extends State<AdminPage> {
         body: TabBarView(
           children: [
             _buildOrderList(),
-            _buildInventoryList(),
+            InventoryTab(database: database),
             _buildSalesInfo(),
           ],
         ),
       ),
+    );
+  }
+
+  Future<void> _updateInventory(int itemId, double newQuantity) async {
+    await database.update(
+      'inventory',
+      {'item_quantity': newQuantity},
+      where: 'item_id = ?',
+      whereArgs: [itemId],
+    );
+    _fetchInventory();
+  }
+
+  void _showUpdateInventoryDialog(Map<String, dynamic> item) {
+    final TextEditingController quantityController = TextEditingController();
+    quantityController.text = item['item_quantity'].toString();
+
+    showDialog<void>(
+      context: this.context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('${item['item_name']} 재고량 변경'),
+          content: TextField(
+            controller: quantityController,
+            keyboardType: TextInputType.number,
+            decoration:
+                InputDecoration(labelText: '새로운 재고량 (${item['item_unit']})'),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('취소'),
+            ),
+            TextButton(
+              onPressed: () {
+                final double newQuantity =
+                    double.parse(quantityController.text);
+                _updateInventory(item['item_id'], newQuantity);
+                Navigator.of(context).pop();
+              },
+              child: const Text('확인'),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -157,22 +205,6 @@ class _AdminPageState extends State<AdminPage> {
                 ),
               );
             },
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildInventoryList() {
-    return ListView.builder(
-      itemCount: inventory.length,
-      itemBuilder: (context, index) {
-        final item = inventory[index];
-        return Card(
-          margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-          child: ListTile(
-            title: Text('${item['item_name']}'),
-            subtitle: Text('수량: ${item['item_quantity']} ${item['item_unit']}'),
           ),
         );
       },
