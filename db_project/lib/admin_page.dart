@@ -3,6 +3,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'order_details_page.dart';
 import 'inventory_tab.dart';
+import 'sales_chart.dart';
 
 class AdminPage extends StatefulWidget {
   const AdminPage({super.key});
@@ -106,7 +107,7 @@ class _AdminPageState extends State<AdminPage> {
           children: [
             _buildOrderList(),
             InventoryTab(database: database),
-            _buildSalesInfo(),
+            SalesChart(dailySales: dailySales)
           ],
         ),
       ),
@@ -243,22 +244,6 @@ class _AdminPageState extends State<AdminPage> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildSalesInfo() {
-    return ListView.builder(
-      itemCount: dailySales.length,
-      itemBuilder: (context, index) {
-        final sale = dailySales[index];
-        return Card(
-          margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-          child: ListTile(
-            title: Text('날짜: ${sale['date']}'),
-            subtitle: Text('매출: ${sale['total_sales']} 원'),
-          ),
-        );
-      },
     );
   }
 }
