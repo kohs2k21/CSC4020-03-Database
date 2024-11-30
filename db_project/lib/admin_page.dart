@@ -16,6 +16,7 @@ class _AdminPageState extends State<AdminPage> {
   List<Map<String, dynamic>> orders = [];
   List<Map<String, dynamic>> inventory = [];
   List<Map<String, dynamic>> dailySales = [];
+  bool showCompletedOrders = true;
 
   @override
   void initState() {
@@ -160,54 +161,88 @@ class _AdminPageState extends State<AdminPage> {
   }
 
   Widget _buildOrderList() {
-    return ListView.builder(
-      itemCount: orders.length,
-      itemBuilder: (context, index) {
-        final order = orders[index];
-        return Card(
-          margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15.0),
+    List<Map<String, dynamic>> filteredOrders = showCompletedOrders
+        ? orders
+        : orders.where((order) => order['order_status'] != '완료').toList();
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                '완료된 주문 표시',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              Switch(
+                value: showCompletedOrders,
+                onChanged: (bool value) {
+                  setState(() {
+                    showCompletedOrders = value;
+                  });
+                },
+                activeColor: Colors.lightGreen,
+                inactiveThumbColor: Colors.red,
+                inactiveTrackColor: Colors.red[200],
+              ),
+            ],
           ),
-          elevation: 5,
-          child: ListTile(
-            contentPadding: const EdgeInsets.all(16.0),
-            title: Text(
-              '주문 번호: ${order['wait_number']}',
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 8.0),
-                Text('주문 상태: ${order['order_status']}'),
-                Text('주문 시간: ${order['order_time']}'),
-                Text('가격: ${order['total_price']} 원'),
-                Text('결제 방식: ${order['payment_type']}'),
-              ],
-            ),
-            trailing: Switch(
-              value: order['order_status'] == '완료',
-              onChanged: (value) {
-                _toggleOrderStatus(order['order_id'], order['order_status']);
-              },
-              activeColor: Colors.green,
-              inactiveThumbColor: Colors.red,
-              inactiveTrackColor: Colors.red[200],
-            ),
-            isThreeLine: true,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) =>
-                      OrderDetailsPage(orderId: order['order_id']),
+        ),
+        Expanded(
+          child: ListView.builder(
+            itemCount: filteredOrders.length,
+            itemBuilder: (context, index) {
+              final order = filteredOrders[index];
+              return Card(
+                margin:
+                    const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15.0),
+                ),
+                elevation: 5,
+                child: ListTile(
+                  contentPadding: const EdgeInsets.all(16.0),
+                  title: Text(
+                    '주문 번호: ${order['wait_number']}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 8.0),
+                      Text('주문 상태: ${order['order_status']}'),
+                      Text('주문 시간: ${order['order_time']}'),
+                      Text('가격: ${order['total_price']} 원'),
+                      Text('결제 방식: ${order['payment_type']}'),
+                    ],
+                  ),
+                  trailing: Switch(
+                    value: order['order_status'] == '완료',
+                    onChanged: (value) {
+                      _toggleOrderStatus(
+                          order['order_id'], order['order_status']);
+                    },
+                    activeColor: Colors.green,
+                    inactiveThumbColor: Colors.red,
+                    inactiveTrackColor: Colors.red[200],
+                  ),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            OrderDetailsPage(orderId: order['order_id']),
+                      ),
+                    );
+                  },
                 ),
               );
             },
           ),
-        );
-      },
+        ),
+      ],
     );
   }
 
