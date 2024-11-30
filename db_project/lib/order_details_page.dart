@@ -79,17 +79,32 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
           final menuId = order['menu_id'];
           final recipes = recipeDetails[menuId] ?? [];
 
-          return ExpansionTile(
-            title: Text(order['menu_name']),
-            subtitle: Text(
-                '수량 : ${order['order_menu_count']} - 소계 : ${order['order_sub_total']}'),
-            children: recipes.map((recipe) {
-              return ListTile(
-                title: Text(recipe['item_name']),
-                subtitle: Text(
-                    '필요 수량: ${recipe['quantity_required']} ${recipe['item_unit']}'),
-              );
-            }).toList(),
+          return Card(
+            margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(15.0),
+            ),
+            elevation: 5,
+            child: ExpansionTile(
+              title: Text(
+                order['menu_name'],
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+              subtitle: Text(
+                '수량: ${order['order_menu_count']} | 소계: ${order['order_sub_total']} 원',
+                style: const TextStyle(fontSize: 16),
+              ),
+              children: recipes.map((recipe) {
+                return ListTile(
+                  title: Text(recipe['item_name']),
+                  subtitle: Text(
+                    '필요 수량: ${recipe['quantity_required']} ${recipe['item_unit']}',
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                );
+              }).toList(),
+            ),
           );
         },
       ),
